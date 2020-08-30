@@ -37,10 +37,10 @@ var (
 func main() {
     flag.BoolVar(&appendMode, "a", false, "Append the value")
     flag.BoolVar(&removeMediaExt, "m", false, "Ignore media extensions")
-    flag.BoolVar(&query, "q", false, "Replace in Queries (default will replace both path and query)")
-    flag.BoolVar(&path, "p", false, "Replace in Paths (default will replace both path and query)")
+    flag.BoolVar(&query, "q", false, "Query only (default will replace both path and query)")
+    flag.BoolVar(&path, "p", false, "Path only (default will replace both path and query)")
     flag.StringVar(&blacklistExt, "b", "", "Additional blacklist extensions (Ex: js,html)")
-    flag.StringVar(&place, "i", "all", "Where to inject\n  all: replace all\n  one: replace one by one\n  2: replace the second path/param\n  -2: replace the second path/param from the end")
+    flag.StringVar(&place, "i", "all", "Where to inject (when using with path or value)\n  all: replace all\n  one: replace one by one\n  2: replace the second path/param\n  -2: replace the second path/param from the end")
     flag.StringVar(&toInjectList, "f", "", "Payload list")
     flag.Parse()
 
