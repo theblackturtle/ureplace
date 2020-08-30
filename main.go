@@ -27,7 +27,6 @@ var (
     appendMode     bool
     query          bool
     path           bool
-    bothPathQuery  bool
     removeMediaExt bool
     place          string
     blacklistExt   string
@@ -38,18 +37,12 @@ var (
 func main() {
     flag.BoolVar(&appendMode, "a", false, "Append the value")
     flag.BoolVar(&removeMediaExt, "m", false, "Ignore media extensions")
-    flag.BoolVar(&query, "q", false, "Replace in Queries")
-    flag.BoolVar(&path, "p", false, "Replace in Paths")
-    flag.BoolVar(&bothPathQuery, "A", false, "Replace in Paths and Queries")
-    flag.StringVar(&blacklistExt, "b", "", "Additional blacklist extensions (js)")
+    flag.BoolVar(&query, "q", false, "Replace in Queries (default will replace both path and query)")
+    flag.BoolVar(&path, "p", false, "Replace in Paths (default will replace both path and query)")
+    flag.StringVar(&blacklistExt, "b", "", "Additional blacklist extensions (Ex: js,html)")
     flag.StringVar(&place, "i", "all", "Where to inject\n  all: replace all\n  one: replace one by one\n  2: replace the second path/param\n  -2: replace the second path/param from the end")
     flag.StringVar(&toInjectList, "f", "", "Payload list")
     flag.Parse()
-
-    if !query && !path {
-        fmt.Fprintln(os.Stderr, "Choose Query or Path")
-        os.Exit(1)
-    }
 
     if toInjectList != "" {
         pf, err := os.Open(toInjectList)
@@ -97,18 +90,35 @@ func main() {
         for _, payload := range payloadList {
             var urls []string
             var err error
-            if query {
+
+            switch {
+            case query:
                 urls, err = QueryBuilder(u.String(), payload)
-            } else if path {
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "[QUERY] Failed to generate %s with the payload %s\n", u.String(), payload)
+                    continue
+                }
+            case path:
                 urls, err = PathBuilder(u.String(), payload)
-            } else if bothPathQuery {
-
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
+                    continue
+                }
+            default:
+                qUrls, err := QueryBuilder(u.String(), payload)
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "[QUERY] Failed to generate %s with the payload %s\n", u.String(), payload)
+                    continue
+                }
+                for _, qUrl := range qUrls {
+                    urls, err = PathBuilder(qUrl, payload)
+                    if err != nil {
+                        fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
+                        continue
+                    }
+                }
             }
 
-            if err != nil {
-                fmt.Fprintf(os.Stderr, "Failed to generate %s with the payload %s\n", u.String(), payload)
-                continue
-            }
             for _, gU := range urls {
                 fmt.Println(gU)
             }
