@@ -16,7 +16,7 @@ import (
 
 const (
     ReplaceAll      = "all"
-    ReplaceOneByOne = "one-by-one"
+    ReplaceOneByOne = "one"
 )
 
 var (
