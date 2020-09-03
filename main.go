@@ -136,7 +136,7 @@ func QueryBuilder(urlString string, payload string) ([]string, error) {
     }
 
     if len(u.Query()) == 0 {
-        return urlList, fmt.Errorf("no query")
+        return urlList, nil
     }
 
     for p := range u.Query() {
