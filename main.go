@@ -28,10 +28,13 @@ var (
     query          bool
     path           bool
     removeMediaExt bool
-    place          string
-    blacklistExt   string
-    toInjectList   string
-    payloadList    []string
+    removeLastPath bool
+
+    place        string
+    blacklistExt string
+    toInjectList string
+    payloadList  []string
+    injectWord   string
 )
 
 func main() {
@@ -39,9 +42,13 @@ func main() {
     flag.BoolVar(&removeMediaExt, "m", false, "Ignore media extensions")
     flag.BoolVar(&query, "q", false, "Query only (default will replace both path and query)")
     flag.BoolVar(&path, "p", false, "Path only (default will replace both path and query)")
+    flag.BoolVar(&removeLastPath, "pp", true, "Remove last path")
+
     flag.StringVar(&blacklistExt, "b", "", "Additional blacklist extensions (Ex: js,html)")
-    flag.StringVar(&place, "i", "all", "Where to inject (when using with path or value)\n  all: replace all\n  one: replace one by one\n  2: replace the second path/param\n  -2: replace the second path/param from the end")
+    flag.StringVar(&place, "i", "one", "Where to inject (when using with path or value)\n  all: replace all\n  one: replace one by one\n  2: replace the second path/param\n  -2: replace the second path/param from the end")
     flag.StringVar(&toInjectList, "f", "", "Payload list")
+    flag.StringVar(&injectWord, "I", "FUZZ", "Inject Words to replace")
+
     flag.Parse()
 
     if toInjectList != "" {
@@ -58,7 +65,7 @@ func main() {
             }
         }
     } else {
-        payloadList = append(payloadList, flag.Arg(0))
+        payloadList = append(payloadList, injectWord)
     }
 
     if blacklistExt != "" {
@@ -88,38 +95,50 @@ func main() {
         }
 
         for _, payload := range payloadList {
-            var urls []string
-            var err error
+            var finalUrls []string
 
             switch {
             case query:
-                urls, err = QueryBuilder(u.String(), payload)
+                urls, err := QueryBuilder(u.String(), payload)
+                finalUrls = append(finalUrls, urls...)
                 if err != nil {
                     fmt.Fprintf(os.Stderr, "[QUERY] Failed to generate %s with the payload %s\n", u.String(), payload)
                     continue
                 }
             case path:
-                urls, err = PathBuilder(u.String(), payload)
+                urls, err := PathBuilder(u.String(), payload)
+                finalUrls = append(finalUrls, urls...)
                 if err != nil {
                     fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
                     continue
                 }
             default:
                 qUrls, err := QueryBuilder(u.String(), payload)
+                finalUrls = append(finalUrls, qUrls...)
                 if err != nil {
                     fmt.Fprintf(os.Stderr, "[QUERY] Failed to generate %s with the payload %s\n", u.String(), payload)
                     continue
                 }
-                for _, qUrl := range qUrls {
-                    urls, err = PathBuilder(qUrl, payload)
-                    if err != nil {
-                        fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
-                        continue
-                    }
+                // for _, qUrl := range qUrls {
+                //     urls, err = PathBuilder(qUrl, payload)
+                //     if err != nil {
+                //         fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
+                //         continue
+                //     }
+                // }
+
+                // path
+                pUrls, err := PathBuilder(u.String(), payload)
+                finalUrls = append(finalUrls, pUrls...)
+
+                if err != nil {
+                    fmt.Fprintf(os.Stderr, "[PATH] Failed to generate %s with the payload %s\n", u.String(), payload)
+                    continue
                 }
+
             }
 
-            for _, gU := range urls {
+            for _, gU := range finalUrls {
                 fmt.Println(gU)
             }
         }
@@ -249,6 +268,10 @@ func PathBuilder(urlString string, payload string) ([]string, error) {
                 pathClone[i] = pathClone[i] + payload
             } else {
                 pathClone[i] = payload
+                // remove last paths after the payload
+                if removeLastPath {
+                    pathClone = pathClone[:i+1]
+                }
             }
             cloneURL.Path = strings.Join(pathClone, "/")
             cloneURLRawPath, _ := url.PathUnescape(cloneURL.String())
