@@ -119,6 +119,7 @@ func main() {
                     fmt.Fprintf(os.Stderr, "[QUERY] Failed to generate %s with the payload %s\n", u.String(), payload)
                     continue
                 }
+
                 // for _, qUrl := range qUrls {
                 //     urls, err = PathBuilder(qUrl, payload)
                 //     if err != nil {
